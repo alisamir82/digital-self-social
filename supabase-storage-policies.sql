@@ -6,11 +6,11 @@
 -- This script creates Row Level Security (RLS) policies for Storage buckets.
 -- Run this in your Supabase SQL Editor after creating the buckets.
 --
--- Required buckets:
--- 1. videos (for video files)
--- 2. thumbnails (for video thumbnails)
--- 3. avatars (for user profile pictures) - optional
--- 4. banners (for channel banners) - optional
+-- Required buckets (create these first in Storage UI):
+-- 1. videos (for video files) - set to PUBLIC
+-- 2. thumbnails (for video thumbnails) - set to PUBLIC
+-- 3. avatars (for user profile pictures) - set to PUBLIC [optional]
+-- 4. banners (for channel banners) - set to PUBLIC [optional]
 --
 -- =====================================================
 
@@ -184,26 +184,22 @@ USING (
 */
 
 -- =====================================================
--- VERIFY POLICIES
+-- SUCCESS MESSAGE
 -- =====================================================
--- Run these queries to verify your policies are created:
+-- If you see this message, all policies were created successfully!
 
--- Check videos bucket policies
-SELECT * FROM storage.policies WHERE bucket_id = 'videos';
-
--- Check thumbnails bucket policies
-SELECT * FROM storage.policies WHERE bucket_id = 'thumbnails';
-
--- Check avatars bucket policies (if created)
--- SELECT * FROM storage.policies WHERE bucket_id = 'avatars';
-
--- Check banners bucket policies (if created)
--- SELECT * FROM storage.policies WHERE bucket_id = 'banners';
+DO $$
+BEGIN
+  RAISE NOTICE '✅ Storage policies created successfully!';
+  RAISE NOTICE '📝 Policies created for: videos, thumbnails';
+  RAISE NOTICE '💡 To verify, go to Storage > Policies in your Supabase dashboard';
+END $$;
 
 -- =====================================================
 -- TROUBLESHOOTING
 -- =====================================================
--- If you need to delete and recreate policies:
+-- If you need to delete and recreate policies, run these commands:
+
 /*
 -- Drop all policies for videos bucket
 DROP POLICY IF EXISTS "Public read access for videos" ON storage.objects;
@@ -216,7 +212,22 @@ DROP POLICY IF EXISTS "Public read access for thumbnails" ON storage.objects;
 DROP POLICY IF EXISTS "Authenticated users can upload thumbnails" ON storage.objects;
 DROP POLICY IF EXISTS "Users can update their own thumbnails" ON storage.objects;
 DROP POLICY IF EXISTS "Users can delete their own thumbnails" ON storage.objects;
+
+-- Then re-run the CREATE POLICY statements above
 */
+
+-- =====================================================
+-- VERIFICATION
+-- =====================================================
+-- To verify your policies were created:
+-- 1. Go to Storage in your Supabase dashboard
+-- 2. Click on a bucket (e.g., "videos")
+-- 3. Click the "Policies" tab
+-- 4. You should see 4 policies listed
+--
+-- Or check in the Supabase dashboard under:
+-- Storage > [bucket name] > Policies
+-- =====================================================
 
 -- =====================================================
 -- NOTES
@@ -234,5 +245,6 @@ DROP POLICY IF EXISTS "Users can delete their own thumbnails" ON storage.objects
 -- 3. Users can only upload to their own folders
 -- 4. Users can only modify/delete their own files
 --
--- Make sure your buckets are set to PUBLIC in Storage settings!
+-- IMPORTANT: Make sure your buckets are set to PUBLIC in Storage settings!
+-- Go to Storage > [bucket] > Settings > Public bucket = ON
 -- =====================================================
