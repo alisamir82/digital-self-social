@@ -61,50 +61,39 @@ Digital Self Social uses Supabase Storage for videos, thumbnails, and user uploa
 
 ## Step 4: Configure Storage Policies
 
-For each bucket, you need to set up access policies:
+After creating the buckets, you need to set up Row Level Security (RLS) policies to control who can upload, read, update, and delete files.
 
-1. Click on the bucket name (e.g., **"videos"**)
-2. Click on the **"Policies"** tab
-3. Click **"New policy"**
-4. Choose **"Custom policy"**
+### Quick Setup (Recommended)
 
-### Policy 1: Allow authenticated uploads
-- **Policy name**: Allow authenticated users to upload
-- **Allowed operation**: INSERT
-- **Target roles**: authenticated
-- **Policy definition**:
+The easiest way to set up all policies at once:
+
+1. Go to **"SQL Editor"** in your Supabase dashboard
+2. Click **"New query"**
+3. Open the `supabase-storage-policies.sql` file from the project
+4. Copy and paste the entire contents into the SQL Editor
+5. Click **"Run"** to execute
+
+This will automatically create all necessary policies for:
+- ✅ Public read access to all files
+- ✅ Authenticated users can upload to their own folders
+- ✅ Users can only modify/delete their own files
+- ✅ Proper folder structure enforcement (`{bucket}/{user_id}/{filename}`)
+
+### Verify Policies
+
+After running the script, verify the policies were created:
+
 ```sql
-(bucket_id = 'videos'::text) AND (auth.role() = 'authenticated'::text)
+-- Check videos bucket policies
+SELECT * FROM storage.policies WHERE bucket_id = 'videos';
+
+-- Check thumbnails bucket policies
+SELECT * FROM storage.policies WHERE bucket_id = 'thumbnails';
 ```
 
-### Policy 2: Allow public read access
-- **Policy name**: Allow public read access
-- **Allowed operation**: SELECT
-- **Target roles**: public
-- **Policy definition**:
-```sql
-(bucket_id = 'videos'::text)
-```
+You should see 4 policies for each bucket.
 
-### Policy 3: Allow users to update their own files
-- **Policy name**: Allow users to update own files
-- **Allowed operation**: UPDATE
-- **Target roles**: authenticated
-- **Policy definition**:
-```sql
-(bucket_id = 'videos'::text) AND (auth.uid()::text = (storage.foldername(name))[1])
-```
-
-### Policy 4: Allow users to delete their own files
-- **Policy name**: Allow users to delete own files
-- **Allowed operation**: DELETE
-- **Target roles**: authenticated
-- **Policy definition**:
-```sql
-(bucket_id = 'videos'::text) AND (auth.uid()::text = (storage.foldername(name))[1])
-```
-
-**Repeat these policies for all buckets** (thumbnails, avatars, banners), replacing `'videos'` with the appropriate bucket name.
+**For detailed instructions and troubleshooting**, see `STORAGE_SETUP_GUIDE.md`.
 
 ## Step 5: Enable Realtime
 

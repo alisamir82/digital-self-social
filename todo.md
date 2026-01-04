@@ -199,3 +199,11 @@
 ## Completed
 - [x] Generate custom app logo
 - [x] Update app branding (name, colors)
+
+
+## Supabase Storage Policies
+- [x] Create Storage bucket policies for videos
+- [x] Create Storage bucket policies for thumbnails
+- [x] Create comprehensive setup guide
+- [ ] Test upload permissions
+- [ ] Test public read access
