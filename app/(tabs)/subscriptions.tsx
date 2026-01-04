@@ -1,8 +1,17 @@
 import { useState, useEffect } from 'react';
-import { FlatList, View, Text, RefreshControl, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  FlatList,
+  RefreshControl,
+  ActivityIndicator,
+  TouchableOpacity,
+} from 'react-native';
+import { router } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { VideoCard } from '@/components/video-card';
 import { supabase } from '@/lib/supabase';
+import { useSupabaseAuth } from '@/hooks/use-supabase-auth';
 import { useColors } from '@/hooks/use-colors';
 
 interface Video {
@@ -21,27 +30,46 @@ interface Video {
   };
 }
 
-export default function HomeScreen() {
+export default function SubscriptionsScreen() {
   const colors = useColors();
+  const { user, isAuthenticated } = useSupabaseAuth();
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
 
-  const ITEMS_PER_PAGE = 10;
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchSubscriptionVideos();
+    } else {
+      setLoading(false);
+    }
+  }, [isAuthenticated]);
 
-  const fetchVideos = async (pageNum: number = 0, isRefresh: boolean = false) => {
+  const fetchSubscriptionVideos = async () => {
+    if (!user) return;
+
     try {
-      if (isRefresh) {
-        setRefreshing(true);
-      } else if (pageNum === 0) {
-        setLoading(true);
+      setLoading(true);
+
+      // Get user's subscribed channels
+      const { data: subscriptions, error: subError } = await supabase
+        .from('subscriptions')
+        .select('channel_id')
+        .eq('subscriber_id', user.id);
+
+      if (subError) {
+        console.error('Error fetching subscriptions:', subError);
+        return;
       }
 
-      const from = pageNum * ITEMS_PER_PAGE;
-      const to = from + ITEMS_PER_PAGE - 1;
+      if (!subscriptions || subscriptions.length === 0) {
+        setVideos([]);
+        return;
+      }
 
+      const channelIds = subscriptions.map((sub) => sub.channel_id);
+
+      // Fetch videos from subscribed channels
       const { data, error } = await supabase
         .from('videos')
         .select(`
@@ -59,23 +87,17 @@ export default function HomeScreen() {
             )
           )
         `)
+        .in('channel_id', channelIds)
         .eq('visibility', 'public')
         .order('created_at', { ascending: false })
-        .range(from, to);
+        .limit(50);
 
       if (error) {
         console.error('Error fetching videos:', error);
         return;
       }
 
-      if (data) {
-        if (isRefresh || pageNum === 0) {
-          setVideos(data);
-        } else {
-          setVideos((prev) => [...prev, ...data]);
-        }
-        setHasMore(data.length === ITEMS_PER_PAGE);
-      }
+      setVideos(data || []);
     } catch (error) {
       console.error('Error:', error);
     } finally {
@@ -84,21 +106,9 @@ export default function HomeScreen() {
     }
   };
 
-  useEffect(() => {
-    fetchVideos(0);
-  }, []);
-
   const handleRefresh = () => {
-    setPage(0);
-    fetchVideos(0, true);
-  };
-
-  const handleLoadMore = () => {
-    if (!loading && hasMore) {
-      const nextPage = page + 1;
-      setPage(nextPage);
-      fetchVideos(nextPage);
-    }
+    setRefreshing(true);
+    fetchSubscriptionVideos();
   };
 
   const renderVideo = ({ item }: { item: Video }) => (
@@ -115,31 +125,28 @@ export default function HomeScreen() {
     />
   );
 
-  const renderEmpty = () => {
-    if (loading) return null;
+  if (!isAuthenticated) {
     return (
-      <View className="flex-1 justify-center items-center py-20">
-        <Text className="text-muted text-center">
-          No videos yet. Be the first to upload!
+      <ScreenContainer className="justify-center items-center px-6">
+        <Text className="text-2xl font-bold text-foreground mb-4">Sign In Required</Text>
+        <Text className="text-muted text-center mb-6">
+          Sign in to see videos from channels you subscribe to
         </Text>
-      </View>
+        <TouchableOpacity
+          onPress={() => router.push('/auth/login' as any)}
+          className="bg-primary rounded-xl px-8 py-3"
+        >
+          <Text className="text-white font-semibold">Sign In</Text>
+        </TouchableOpacity>
+      </ScreenContainer>
     );
-  };
+  }
 
-  const renderFooter = () => {
-    if (!loading || videos.length === 0) return null;
-    return (
-      <View className="py-4">
-        <ActivityIndicator size="small" color={colors.primary} />
-      </View>
-    );
-  };
-
-  if (loading && videos.length === 0) {
+  if (loading) {
     return (
       <ScreenContainer className="justify-center items-center">
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text className="text-muted mt-4">Loading videos...</Text>
+        <Text className="text-muted mt-4">Loading subscriptions...</Text>
       </ScreenContainer>
     );
   }
@@ -148,9 +155,7 @@ export default function HomeScreen() {
     <ScreenContainer edges={['top', 'left', 'right']}>
       <View className="flex-1">
         <View className="px-4 py-3 border-b border-border">
-          <Text className="text-2xl font-bold text-foreground">
-            Digital Self Social
-          </Text>
+          <Text className="text-2xl font-bold text-foreground">Subscriptions</Text>
         </View>
         <FlatList
           data={videos}
@@ -164,10 +169,19 @@ export default function HomeScreen() {
               tintColor={colors.primary}
             />
           }
-          onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.5}
-          ListEmptyComponent={renderEmpty}
-          ListFooterComponent={renderFooter}
+          ListEmptyComponent={
+            <View className="flex-1 justify-center items-center py-20">
+              <Text className="text-muted text-center mb-4">
+                No videos from your subscriptions yet
+              </Text>
+              <TouchableOpacity
+                onPress={() => router.push('/(tabs)' as any)}
+                className="bg-primary rounded-xl px-6 py-3"
+              >
+                <Text className="text-white font-semibold">Explore Videos</Text>
+              </TouchableOpacity>
+            </View>
+          }
         />
       </View>
     </ScreenContainer>

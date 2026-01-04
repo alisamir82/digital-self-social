@@ -4,7 +4,7 @@ import type { ExpoConfig } from "expo/config";
 
 // Bundle ID format: space.manus.<project_name_dots>.<timestamp>
 // e.g., "my-app" created at 2024-01-15 10:30:45 -> "space.manus.my.app.t20240115103045"
-const bundleId = "space.manus.youtube_clone_app.t20260103202407";
+const bundleId = "space.manus.digital_self_social.t20260103202407";
 // Extract timestamp from bundle ID and prefix with "manus" for deep link scheme
 // e.g., "space.manus.my.app.t20240115103045" -> "manus20240115103045"
 const timestamp = bundleId.split(".").pop()?.replace(/^t/, "") ?? "";
@@ -12,11 +12,11 @@ const schemeFromBundleId = `manus${timestamp}`;
 
 const env = {
   // App branding - update these values directly (do not use env vars)
-  appName: "YouTube Clone Mobile App",
-  appSlug: "youtube_clone_app",
+  appName: "Digital Self Social",
+  appSlug: "digital_self_social",
   // S3 URL of the app logo - set this to the URL returned by generate_image when creating custom logo
   // Leave empty to use the default icon from assets/images/icon.png
-  logoUrl: "",
+  logoUrl: "https://s3.us-west-2.amazonaws.com/manus.production.assets/user-assets/2026/01/04/d3c5e8f0-4b0a-4f3e-9e0e-8f5a7c6d9e2b.png",
   scheme: schemeFromBundleId,
   iosBundleId: bundleId,
   androidPackage: bundleId,
